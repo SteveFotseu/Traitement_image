@@ -555,6 +555,7 @@ class MainWindow:
         self._add_filter_tab()
         self._add_morphology_tab()
         self._add_segmentation_tab()
+        self._add_frequency_tab()
     
     def _add_transform_tab(self):
         """Ajoute l'onglet des transformations d'images."""
@@ -592,17 +593,44 @@ class MainWindow:
             style='TButton'
         ).pack(side='left', expand=True, padx=2)
         
-        # Bouton pour redimensionner
+        # Frame pour les transformations de contraste
+        contrast_frame = ttk.LabelFrame(tab, text="Contraste / Intensité", padding=5)
+        contrast_frame.pack(fill='x', pady=5)
+
         ttk.Button(
-            tab,
+            contrast_frame,
+            text="Transfo linéaire (min-max)",
+            command=self._linear_contrast,
+            style='TButton'
+        ).pack(fill='x', pady=2)
+
+        ttk.Button(
+            contrast_frame,
+            text="Transfo saturée (Smin/Smax)",
+            command=self._linear_contrast_saturated,
+            style='TButton'
+        ).pack(fill='x', pady=2)
+
+        ttk.Button(
+            contrast_frame,
+            text="Correction Gamma",
+            command=self._gamma_correction,
+            style='TButton'
+        ).pack(fill='x', pady=2)
+
+        # Boutons de géométrie
+        geo_frame = ttk.LabelFrame(tab, text="Géométrie", padding=5)
+        geo_frame.pack(fill='x', pady=5)
+
+        ttk.Button(
+            geo_frame,
             text="Redimensionner...",
             command=self._resize_image,
             style='TButton'
         ).pack(fill='x', pady=2)
         
-        # Bouton pour recadrer
         ttk.Button(
-            tab,
+            geo_frame,
             text="Recadrer",
             command=self._crop_image,
             style='TButton'
@@ -645,33 +673,61 @@ class MainWindow:
             style='TButton'
         ).pack(side='left', expand=True, padx=2)
         
-        # Frame pour les boutons de détection
+        # Frame pour les filtres de rehaussement / gradient
         btn_frame2 = ttk.Frame(tab)
         btn_frame2.pack(fill='x', pady=2)
-        
-        # Bouton pour détecter les contours
+
+        # Filtre moyenneur (moyenne locale)
         ttk.Button(
-            btn_frame2, 
-            text="Détection de contours", 
+            btn_frame2,
+            text="Filtre moyenneur",
+            command=self._apply_mean_filter,
+            style='TButton'
+        ).pack(side='left', expand=True, padx=2)
+
+        # Filtre Laplacien (passe-haut)
+        ttk.Button(
+            btn_frame2,
+            text="Filtre Laplacien",
+            command=self._apply_laplacian_filter,
+            style='TButton'
+        ).pack(side='left', expand=True, padx=2)
+
+        # Filtre Sobel (norme du gradient)
+        ttk.Button(
+            btn_frame2,
+            text="Filtre Sobel",
+            command=self._apply_sobel_filter,
+            style='TButton'
+        ).pack(side='left', expand=True, padx=2)
+
+        # Frame pour les améliorations globales
+        btn_frame3 = ttk.Frame(tab)
+        btn_frame3.pack(fill='x', pady=2)
+        
+        # Bouton pour détecter les contours (Canny simplifié)
+        ttk.Button(
+            btn_frame3, 
+            text="Détection de contours",
             command=self._detect_edges,
             style='TButton'
         ).pack(side='left', expand=True, padx=2)
         
         # Bouton pour renforcer les contours
         ttk.Button(
-            btn_frame2,
+            btn_frame3,
             text="Renforcer les contours",
             command=self._sharpen_image,
             style='TButton'
         ).pack(side='left', expand=True, padx=2)
         
-        # Frame pour les améliorations
-        btn_frame3 = ttk.Frame(tab)
-        btn_frame3.pack(fill='x', pady=2)
+        # Frame pour les améliorations de contraste
+        btn_frame4 = ttk.Frame(tab)
+        btn_frame4.pack(fill='x', pady=2)
         
         # Bouton pour améliorer le contraste
         ttk.Button(
-            btn_frame3,
+            btn_frame4,
             text="Améliorer le contraste",
             command=self._enhance_contrast,
             style='TButton'
@@ -679,7 +735,7 @@ class MainWindow:
         
         # Bouton pour égaliser l'histogramme
         ttk.Button(
-            btn_frame3,
+            btn_frame4,
             text="Égaliser l'histogramme",
             command=self._equalize_histogram,
             style='TButton'
@@ -741,6 +797,14 @@ class MainWindow:
             command=self._apply_closing,
             style='TButton'
         ).pack(side='left', expand=True, padx=2)
+
+        # Bouton pour le gradient morphologique
+        ttk.Button(
+            btn_frame2,
+            text="Gradient morphologique",
+            command=self._morphological_gradient,
+            style='TButton'
+        ).pack(side='left', expand=True, padx=2)
         
         # Frame pour les paramètres
         param_frame = ttk.LabelFrame(tab, text="Paramètres", padding=5)
@@ -799,7 +863,7 @@ class MainWindow:
             style='TButton'
         ).pack(side='left', expand=True, padx=2)
         
-        # Bouton pour la segmentation par couleur
+        # Bouton pour la segmentation par seuillage adaptatif
         ttk.Button(
             btn_frame1,
             text="Seuillage adaptatif",
@@ -807,23 +871,53 @@ class MainWindow:
             style='TButton'
         ).pack(side='left', expand=True, padx=2)
         
-        # Frame pour la détection de couleurs
+        # Frame pour les segmentations avancées
         btn_frame2 = ttk.Frame(tab)
         btn_frame2.pack(fill='x', pady=2)
-        
-        # Bouton pour la segmentation par couleur
+
         ttk.Button(
             btn_frame2,
+            text="Seuillage multi-seuils",
+            command=self._apply_multi_thresholds,
+            style='TButton'
+        ).pack(side='left', expand=True, padx=2)
+
+        ttk.Button(
+            btn_frame2,
+            text="Segmentation k-means",
+            command=self._apply_kmeans_segmentation,
+            style='TButton'
+        ).pack(side='left', expand=True, padx=2)
+
+        ttk.Button(
+            btn_frame2,
+            text="Étiquetage composantes",
+            command=self._label_connected_components,
+            style='TButton'
+        ).pack(side='left', expand=True, padx=2)
+
+        # Frame pour les outils visuels (couleurs/contours)
+        btn_frame3 = ttk.Frame(tab)
+        btn_frame3.pack(fill='x', pady=2)
+
+        ttk.Button(
+            btn_frame3,
             text="Détection de couleurs",
             command=self._detect_colors,
             style='TButton'
         ).pack(side='left', expand=True, padx=2)
-        
-        # Bouton pour la détection de bords avancée
+
         ttk.Button(
-            btn_frame2,
+            btn_frame3,
             text="Détection de contours (Canny)",
             command=self._canny_edge_detection,
+            style='TButton'
+        ).pack(side='left', expand=True, padx=2)
+
+        ttk.Button(
+            btn_frame3,
+            text="Détection de lignes (Hough)",
+            command=self._hough_line_detection,
             style='TButton'
         ).pack(side='left', expand=True, padx=2)
         
@@ -854,6 +948,24 @@ class MainWindow:
             style='TButton'
         ).pack(fill='x', pady=2)
 
+        # Boutons conceptuels (Division-fusion, Croissance de régions)
+        info_frame = ttk.LabelFrame(tab, text="Algorithmes conceptuels", padding=5)
+        info_frame.pack(fill='x', pady=5)
+
+        ttk.Button(
+            info_frame,
+            text="Division-fusion (infos)",
+            command=self._show_split_merge_info,
+            style='TButton'
+        ).pack(fill='x', pady=2)
+
+        ttk.Button(
+            info_frame,
+            text="Croissance de régions (infos)",
+            command=self._show_region_growing_info,
+            style='TButton'
+        ).pack(fill='x', pady=2)
+
         # Bouton pour revenir à l'image initiale
         ttk.Separator(tab, orient='horizontal').pack(fill='x', pady=5)
         ttk.Button(
@@ -863,6 +975,51 @@ class MainWindow:
             style='TButton'
         ).pack(fill='x', pady=2)
         
+    def _add_frequency_tab(self):
+        """Ajoute l'onglet pour les opérations en domaine fréquentiel (FFT)."""
+        tab = ttk.Frame(self.notebook, padding=10)
+        self.notebook.add(tab, text="Fréquences")
+
+        ttk.Label(tab, text="Analyse fréquentielle (FFT)", font=('Arial', 10, 'bold')).pack(pady=5)
+
+        # Boutons pour les opérations FFT
+        ttk.Button(
+            tab,
+            text="FFT (spectre)",
+            command=self._fft_spectrum,
+            style='TButton'
+        ).pack(fill='x', pady=2)
+
+        ttk.Button(
+            tab,
+            text="Filtrage passe-bas (FFT)",
+            command=self._fft_lowpass,
+            style='TButton'
+        ).pack(fill='x', pady=2)
+
+        ttk.Button(
+            tab,
+            text="Filtrage passe-haut (FFT)",
+            command=self._fft_highpass,
+            style='TButton'
+        ).pack(fill='x', pady=2)
+
+        ttk.Button(
+            tab,
+            text="Rehaussement (FFT)",
+            command=self._fft_enhance,
+            style='TButton'
+        ).pack(fill='x', pady=2)
+
+        # Bouton pour revenir à l'image initiale
+        ttk.Separator(tab, orient='horizontal').pack(fill='x', pady=5)
+        ttk.Button(
+            tab,
+            text="Réinitialiser l'image",
+            command=self._reset_image,
+            style='TButton'
+        ).pack(fill='x', pady=2)
+
     def _update_threshold_preview(self):
         """Met à jour l'affichage de la valeur de seuil."""
         value = self.threshold_value.get()
@@ -975,6 +1132,278 @@ class MainWindow:
         except Exception as e:
             messagebox.showerror("Erreur", f"Erreur lors du recadrage: {str(e)}")
     
+    def _linear_contrast(self):
+        """Transformation linéaire min-max sur toute la dynamique (0-255)."""
+        if self.current_image is None:
+            messagebox.showwarning("Avertissement", "Aucune image à transformer.")
+            return
+
+        try:
+            img_array = np.array(self.current_image).astype(np.float32)
+
+            min_val = img_array.min()
+            max_val = img_array.max()
+            if max_val - min_val < 1e-6:
+                messagebox.showinfo("Information", "L'image a déjà une dynamique quasi constante.")
+                return
+
+            # Étirement linéaire sur [0, 255]
+            stretched = (img_array - min_val) * (255.0 / (max_val - min_val))
+            stretched = np.clip(stretched, 0, 255).astype(np.uint8)
+
+            self.current_image = Image.fromarray(stretched)
+            self._update_image_display()
+            if hasattr(self, 'status_var'):
+                self.status_var.set("Transformation linéaire min-max appliquée")
+        except Exception as e:
+            messagebox.showerror("Erreur", f"Erreur lors de la transformation linéaire: {str(e)}")
+
+    def _linear_contrast_saturated(self):
+        """Transformation linéaire avec saturation des valeurs extrêmes (Smin/Smax)."""
+        if self.current_image is None:
+            messagebox.showwarning("Avertissement", "Aucune image à transformer.")
+            return
+
+        try:
+            # Paramètres Smin / Smax demandés à l'utilisateur
+            smin = simpledialog.askinteger(
+                "Transfo saturée",
+                "Smin (0-254):",
+                initialvalue=20,
+                minvalue=0,
+                maxvalue=254,
+            )
+            if smin is None:
+                return
+
+            smax = simpledialog.askinteger(
+                "Transfo saturée",
+                "Smax (Smin+1 - 255):",
+                initialvalue=235,
+                minvalue=smin + 1,
+                maxvalue=255,
+            )
+            if smax is None:
+                return
+
+            img_array = np.array(self.current_image).astype(np.float32)
+
+            # Saturation des valeurs en dehors de [smin, smax]
+            clipped = np.clip(img_array, smin, smax)
+            stretched = (clipped - smin) * (255.0 / (smax - smin))
+            stretched = np.clip(stretched, 0, 255).astype(np.uint8)
+
+            self.current_image = Image.fromarray(stretched)
+            self._update_image_display()
+            if hasattr(self, 'status_var'):
+                self.status_var.set(f"Transformation saturée appliquée (Smin={smin}, Smax={smax})")
+        except Exception as e:
+            messagebox.showerror("Erreur", f"Erreur lors de la transformation saturée: {str(e)}")
+
+    def _gamma_correction(self):
+        """Applique une correction gamma (gamma > 0)."""
+        if self.current_image is None:
+            messagebox.showwarning("Avertissement", "Aucune image à transformer.")
+            return
+
+        try:
+            gamma = simpledialog.askfloat(
+                "Correction Gamma",
+                "Valeur de gamma (> 0, ex: 0.5, 1.0, 2.0):",
+                initialvalue=1.2,
+                minvalue=0.01
+            )
+            if gamma is None:
+                return
+
+            img_array = np.array(self.current_image).astype(np.float32)
+
+            # Normalisation [0,1], application du gamma puis remise sur [0,255]
+            img_norm = img_array / 255.0
+            corrected = np.power(img_norm, gamma) * 255.0
+            corrected = np.clip(corrected, 0, 255).astype(np.uint8)
+
+            self.current_image = Image.fromarray(corrected)
+            self._update_image_display()
+            if hasattr(self, 'status_var'):
+                self.status_var.set(f"Correction gamma appliquée (gamma={gamma:.2f})")
+        except Exception as e:
+            messagebox.showerror("Erreur", f"Erreur lors de la correction gamma: {str(e)}")
+
+    # ---------------------
+    # Opérations FFT (Fréquences)
+    # ---------------------
+
+    def _fft_spectrum(self):
+        """Affiche le spectre de Fourier (magnitude log)."""
+        if self.current_image is None:
+            messagebox.showwarning("Avertissement", "Aucune image pour la FFT.")
+            return
+
+        import cv2
+        import numpy as np
+
+        try:
+            img_array = np.array(self.current_image)
+
+            # Conversion en niveaux de gris
+            if img_array.ndim == 3:
+                gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+            else:
+                gray = img_array
+
+            # FFT 2D et centrage
+            f = np.fft.fft2(gray)
+            fshift = np.fft.fftshift(f)
+
+            magnitude_spectrum = 20 * np.log(np.abs(fshift) + 1)
+            magnitude_spectrum = cv2.normalize(
+                magnitude_spectrum, None, 0, 255, cv2.NORM_MINMAX
+            ).astype(np.uint8)
+
+            self.current_image = Image.fromarray(magnitude_spectrum)
+            self._update_image_display()
+            if hasattr(self, 'status_var'):
+                self.status_var.set("Spectre FFT affiché")
+        except Exception as e:
+            messagebox.showerror("Erreur", f"Erreur lors du calcul du spectre FFT: {str(e)}")
+
+    def _fft_lowpass(self):
+        """Applique un filtrage passe-bas en domaine fréquentiel."""
+        if self.current_image is None:
+            messagebox.showwarning("Avertissement", "Aucune image pour la FFT.")
+            return
+
+        import cv2
+        import numpy as np
+
+        try:
+            img_array = np.array(self.current_image)
+
+            if img_array.ndim == 3:
+                gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+            else:
+                gray = img_array
+
+            rows, cols = gray.shape
+            crow, ccol = rows // 2, cols // 2
+
+            # FFT + centrage
+            f = np.fft.fft2(gray)
+            fshift = np.fft.fftshift(f)
+
+            # Masque passe-bas circulaire
+            mask = np.zeros((rows, cols), np.uint8)
+            radius = min(rows, cols) // 4
+            cv2.circle(mask, (ccol, crow), radius, 1, -1)
+
+            fshift_filtered = fshift * mask
+
+            # Retour au domaine spatial
+            f_ishift = np.fft.ifftshift(fshift_filtered)
+            img_back = np.fft.ifft2(f_ishift)
+            img_back = np.abs(img_back)
+
+            img_back = cv2.normalize(img_back, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+
+            self.current_image = Image.fromarray(img_back)
+            self._update_image_display()
+            if hasattr(self, 'status_var'):
+                self.status_var.set("Filtrage passe-bas FFT appliqué")
+        except Exception as e:
+            messagebox.showerror("Erreur", f"Erreur lors du filtrage passe-bas FFT: {str(e)}")
+
+    def _fft_highpass(self):
+        """Applique un filtrage passe-haut en domaine fréquentiel."""
+        if self.current_image is None:
+            messagebox.showwarning("Avertissement", "Aucune image pour la FFT.")
+            return
+
+        import cv2
+        import numpy as np
+
+        try:
+            img_array = np.array(self.current_image)
+
+            if img_array.ndim == 3:
+                gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+            else:
+                gray = img_array
+
+            rows, cols = gray.shape
+            crow, ccol = rows // 2, cols // 2
+
+            f = np.fft.fft2(gray)
+            fshift = np.fft.fftshift(f)
+
+            # Masque passe-haut = 1 - passe-bas
+            mask = np.ones((rows, cols), np.uint8)
+            radius = min(rows, cols) // 4
+            cv2.circle(mask, (ccol, crow), radius, 0, -1)
+
+            fshift_filtered = fshift * mask
+
+            f_ishift = np.fft.ifftshift(fshift_filtered)
+            img_back = np.fft.ifft2(f_ishift)
+            img_back = np.abs(img_back)
+
+            img_back = cv2.normalize(img_back, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+
+            self.current_image = Image.fromarray(img_back)
+            self._update_image_display()
+            if hasattr(self, 'status_var'):
+                self.status_var.set("Filtrage passe-haut FFT appliqué")
+        except Exception as e:
+            messagebox.showerror("Erreur", f"Erreur lors du filtrage passe-haut FFT: {str(e)}")
+
+    def _fft_enhance(self):
+        """Rehausse les détails en combinant l'image avec un passe-haut FFT."""
+        if self.current_image is None:
+            messagebox.showwarning("Avertissement", "Aucune image pour la FFT.")
+            return
+
+        import cv2
+        import numpy as np
+
+        try:
+            img_array = np.array(self.current_image)
+
+            if img_array.ndim == 3:
+                gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+            else:
+                gray = img_array
+
+            rows, cols = gray.shape
+            crow, ccol = rows // 2, cols // 2
+
+            f = np.fft.fft2(gray)
+            fshift = np.fft.fftshift(f)
+
+            # Masque passe-haut
+            mask = np.ones((rows, cols), np.uint8)
+            radius = min(rows, cols) // 6
+            cv2.circle(mask, (ccol, crow), radius, 0, -1)
+
+            fshift_hp = fshift * mask
+
+            f_ishift_hp = np.fft.ifftshift(fshift_hp)
+            hp_spatial = np.fft.ifft2(f_ishift_hp)
+            hp_spatial = np.abs(hp_spatial)
+
+            hp_norm = cv2.normalize(hp_spatial, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+
+            # Rehaussement : image originale + alpha * passe-haut
+            alpha = 1.0
+            enhanced = gray.astype(np.float32) + alpha * hp_norm.astype(np.float32)
+            enhanced = np.clip(enhanced, 0, 255).astype(np.uint8)
+
+            self.current_image = Image.fromarray(enhanced)
+            self._update_image_display()
+            if hasattr(self, 'status_var'):
+                self.status_var.set("Rehaussement FFT appliqué")
+        except Exception as e:
+            messagebox.showerror("Erreur", f"Erreur lors du rehaussement FFT: {str(e)}")
+    
     def _apply_gaussian_blur(self):
         """Applique un flou gaussien à l'image."""
         if self.current_image:
@@ -994,6 +1423,98 @@ class MainWindow:
             # Convertir de nouveau en image PIL
             self.current_image = Image.fromarray(blurred)
             self._update_image_display()
+            if hasattr(self, 'status_var'):
+                self.status_var.set("Flou gaussien appliqué")
+
+    def _apply_mean_filter(self):
+        """Applique un filtre moyenneur (moyenne locale)."""
+        if self.current_image is None:
+            messagebox.showwarning("Avertissement", "Aucune image à filtrer.")
+            return
+
+        import cv2
+        import numpy as np
+
+        try:
+            # Taille du noyau à partir de kernel_size (impair)
+            k = self.kernel_size.get()
+            if k % 2 == 0:
+                k += 1
+                self.kernel_size.set(k)
+
+            img_array = np.array(self.current_image)
+
+            # Si niveaux de gris 2D, on peut rester en 2D
+            if img_array.ndim == 2:
+                filtered = cv2.blur(img_array, (k, k))
+            else:
+                filtered = cv2.blur(img_array, (k, k))
+
+            self.current_image = Image.fromarray(filtered)
+            self._update_image_display()
+            if hasattr(self, 'status_var'):
+                self.status_var.set(f"Filtre moyenneur appliqué (noyau {k}x{k})")
+        except Exception as e:
+            messagebox.showerror("Erreur", f"Erreur lors de l'application du filtre moyenneur: {str(e)}")
+
+    def _apply_laplacian_filter(self):
+        """Applique un filtre Laplacien (passe-haut) pour renforcer les contours."""
+        if self.current_image is None:
+            messagebox.showwarning("Avertissement", "Aucune image à filtrer.")
+            return
+
+        import cv2
+        import numpy as np
+
+        try:
+            img_array = np.array(self.current_image)
+
+            # Conversion en niveaux de gris pour le Laplacien
+            if img_array.ndim == 3:
+                gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+            else:
+                gray = img_array
+
+            lap = cv2.Laplacian(gray, ddepth=cv2.CV_64F, ksize=3)
+            lap_abs = cv2.convertScaleAbs(lap)
+
+            self.current_image = Image.fromarray(lap_abs)
+            self._update_image_display()
+            if hasattr(self, 'status_var'):
+                self.status_var.set("Filtre Laplacien appliqué")
+        except Exception as e:
+            messagebox.showerror("Erreur", f"Erreur lors de l'application du filtre Laplacien: {str(e)}")
+
+    def _apply_sobel_filter(self):
+        """Applique un filtre de Sobel (norme du gradient)."""
+        if self.current_image is None:
+            messagebox.showwarning("Avertissement", "Aucune image à filtrer.")
+            return
+
+        import cv2
+        import numpy as np
+
+        try:
+            img_array = np.array(self.current_image)
+
+            # Conversion en niveaux de gris
+            if img_array.ndim == 3:
+                gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+            else:
+                gray = img_array
+
+            sobelx = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=3)
+            sobely = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=3)
+
+            mag = np.sqrt(sobelx ** 2 + sobely ** 2)
+            mag = np.clip(mag, 0, 255).astype(np.uint8)
+
+            self.current_image = Image.fromarray(mag)
+            self._update_image_display()
+            if hasattr(self, 'status_var'):
+                self.status_var.set("Filtre Sobel appliqué")
+        except Exception as e:
+            messagebox.showerror("Erreur", f"Erreur lors de l'application du filtre Sobel: {str(e)}")
     
     def _detect_edges(self):
         """Détecte les contours dans l'image."""
@@ -1245,6 +1766,43 @@ class MainWindow:
             except Exception as e:
                 messagebox.showerror("Erreur", f"Erreur lors de l'application de la fermeture: {str(e)}")
 
+    def _morphological_gradient(self):
+        """Calcule le gradient morphologique (Dilatation - Érosion)."""
+        if self.current_image is None:
+            messagebox.showwarning("Avertissement", "Aucune image pour le gradient morphologique.")
+            return
+
+        import cv2
+        import numpy as np
+
+        try:
+            k = self.kernel_size.get()
+            if k % 2 == 0:
+                k += 1
+                self.kernel_size.set(k)
+
+            img_array = np.array(self.current_image)
+
+            # Pour la morphologie, travailler sur chaque canal ou en niveaux de gris
+            if img_array.ndim == 3:
+                gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+            else:
+                gray = img_array
+
+            kernel = np.ones((k, k), np.uint8)
+
+            dilated = cv2.dilate(gray, kernel, iterations=1)
+            eroded = cv2.erode(gray, kernel, iterations=1)
+
+            gradient = cv2.subtract(dilated, eroded)
+
+            self.current_image = Image.fromarray(gradient)
+            self._update_image_display()
+            if hasattr(self, 'status_var'):
+                self.status_var.set(f"Gradient morphologique appliqué (noyau {k}x{k})")
+        except Exception as e:
+            messagebox.showerror("Erreur", f"Erreur lors du gradient morphologique: {str(e)}")
+
     def _apply_adaptive_threshold(self):
         """Applique un seuillage adaptatif à l'image."""
         if self.current_image is not None:
@@ -1344,6 +1902,53 @@ class MainWindow:
             except Exception as e:
                 messagebox.showerror("Erreur", f"Erreur lors de la détection des contours: {str(e)}")
 
+    def _hough_line_detection(self):
+        """Détecte les lignes avec la transformée de Hough (probabiliste)."""
+        if self.current_image is None:
+            messagebox.showwarning("Avertissement", "Aucune image pour la détection de lignes.")
+            return
+
+        import cv2
+        import numpy as np
+
+        try:
+            img_array = np.array(self.current_image)
+
+            # Assurer une image couleur pour dessiner les lignes
+            if img_array.ndim == 2:
+                color_img = cv2.cvtColor(img_array, cv2.COLOR_GRAY2RGB)
+                gray = img_array
+            else:
+                color_img = img_array.copy()
+                gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+
+            # Réduction du bruit puis Canny
+            blurred = cv2.GaussianBlur(gray, (5, 5), 1.0)
+            edges = cv2.Canny(blurred, 50, 150)
+
+            # Transformée de Hough probabiliste
+            lines = cv2.HoughLinesP(
+                edges,
+                rho=1,
+                theta=np.pi / 180,
+                threshold=80,
+                minLineLength=30,
+                maxLineGap=10,
+            )
+
+            # Dessiner les lignes détectées en rouge
+            if lines is not None:
+                for line in lines:
+                    x1, y1, x2, y2 = line[0]
+                    cv2.line(color_img, (x1, y1), (x2, y2), (255, 0, 0), 2)
+
+            self.current_image = Image.fromarray(color_img)
+            self._update_image_display()
+            if hasattr(self, 'status_var'):
+                self.status_var.set("Détection de lignes (Hough) effectuée")
+        except Exception as e:
+            messagebox.showerror("Erreur", f"Erreur lors de la détection de lignes (Hough): {str(e)}")
+
     def _apply_manual_threshold(self):
         """Applique un seuillage manuel avec la valeur du curseur."""
         if self.current_image is not None:
@@ -1371,6 +1976,174 @@ class MainWindow:
                 
             except Exception as e:
                 messagebox.showerror("Erreur", f"Erreur lors du seuillage manuel: {str(e)}")
+
+    def _apply_multi_thresholds(self):
+        """Applique un seuillage multi-seuils (T1, T2) pour 3 classes de niveaux de gris."""
+        if self.current_image is None:
+            messagebox.showwarning("Avertissement", "Aucune image à segmenter.")
+            return
+
+        import cv2
+        import numpy as np
+
+        try:
+            # Demander T1 et T2
+            t1 = simpledialog.askinteger(
+                "Seuillage multi-seuils",
+                "Seuil T1 (0-254):",
+                initialvalue=85,
+                minvalue=0,
+                maxvalue=254,
+            )
+            if t1 is None:
+                return
+
+            t2 = simpledialog.askinteger(
+                "Seuillage multi-seuils",
+                "Seuil T2 (T1+1 - 255):",
+                initialvalue=170,
+                minvalue=t1 + 1,
+                maxvalue=255,
+            )
+            if t2 is None:
+                return
+
+            img_array = np.array(self.current_image)
+
+            # Conversion en niveaux de gris
+            if img_array.ndim == 3:
+                gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+            else:
+                gray = img_array
+
+            # 3 classes : [0,T1[ -> 0, [T1,T2[ -> 127, [T2,255] -> 255
+            result = np.zeros_like(gray, dtype=np.uint8)
+            result[(gray >= 0) & (gray < t1)] = 0
+            result[(gray >= t1) & (gray < t2)] = 127
+            result[gray >= t2] = 255
+
+            self.current_image = Image.fromarray(result)
+            self._update_image_display()
+            if hasattr(self, 'status_var'):
+                self.status_var.set(f"Seuillage multi-seuils appliqué (T1={t1}, T2={t2})")
+        except Exception as e:
+            messagebox.showerror("Erreur", f"Erreur lors du seuillage multi-seuils: {str(e)}")
+
+    def _apply_kmeans_segmentation(self):
+        """Applique une segmentation par k-means (k classes)."""
+        if self.current_image is None:
+            messagebox.showwarning("Avertissement", "Aucune image à segmenter.")
+            return
+
+        import cv2
+        import numpy as np
+
+        try:
+            k = simpledialog.askinteger(
+                "Segmentation k-means",
+                "Nombre de classes k (2-6):",
+                initialvalue=3,
+                minvalue=2,
+                maxvalue=6,
+            )
+            if k is None:
+                return
+
+            img_array = np.array(self.current_image)
+
+            # Utiliser l'image en couleur si possible
+            if img_array.ndim == 2:
+                data = img_array.reshape((-1, 1)).astype(np.float32)
+            else:
+                data = img_array.reshape((-1, 3)).astype(np.float32)
+
+            # Critère d'arrêt et exécution de k-means
+            criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
+            _, labels, centers = cv2.kmeans(
+                data,
+                K=k,
+                bestLabels=None,
+                criteria=criteria,
+                attempts=3,
+                flags=cv2.KMEANS_PP_CENTERS,
+            )
+
+            centers = np.uint8(centers)
+            segmented = centers[labels.flatten()]
+
+            if img_array.ndim == 2:
+                segmented = segmented.reshape(img_array.shape)
+            else:
+                segmented = segmented.reshape(img_array.shape)
+
+            self.current_image = Image.fromarray(segmented)
+            self._update_image_display()
+            if hasattr(self, 'status_var'):
+                self.status_var.set(f"Segmentation k-means appliquée (k={k})")
+        except Exception as e:
+            messagebox.showerror("Erreur", f"Erreur lors de la segmentation k-means: {str(e)}")
+
+    def _label_connected_components(self):
+        """Étiquette les composantes connexes d'une image binaire et les colore."""
+        if self.current_image is None:
+            messagebox.showwarning("Avertissement", "Aucune image à étiqueter.")
+            return
+
+        import cv2
+        import numpy as np
+
+        try:
+            img_array = np.array(self.current_image)
+
+            # Travailler sur niveaux de gris binaire
+            if img_array.ndim == 3:
+                gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+            else:
+                gray = img_array
+
+            # S'assurer qu'on a une image binaire
+            _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+
+            num_labels, labels = cv2.connectedComponents(binary)
+
+            # Générer une LUT de couleurs aléatoires (0 = fond noir)
+            label_hue = np.uint8(179 * labels / np.maximum(num_labels - 1, 1))
+            blank_ch = 255 * np.ones_like(label_hue)
+            hsv = cv2.merge([label_hue, blank_ch, blank_ch])
+            colored = cv2.cvtColor(hsv, cv2.COLOR_HSV2RGB)
+            colored[label_hue == 0] = 0  # fond en noir
+
+            self.current_image = Image.fromarray(colored)
+            self._update_image_display()
+            if hasattr(self, 'status_var'):
+                self.status_var.set(f"Étiquetage des composantes (N={num_labels - 1} objets)")
+        except Exception as e:
+            messagebox.showerror("Erreur", f"Erreur lors de l'étiquetage des composantes: {str(e)}")
+
+    def _show_split_merge_info(self):
+        """Affiche une explication sur l'algorithme de division-fusion (split-and-merge)."""
+        text = (
+            "Division-fusion (split-and-merge) :\n\n"
+            "1. On commence par toute l'image comme une seule région.\n"
+            "2. Si une région n'est pas homogène (par exemple, variance trop grande),\n"
+            "   on la DIVISE en 4 sous-régions (division récursive en quadtree).\n"
+            "3. Une fois la division terminée, on FUSIONNE les régions voisines qui\n"
+            "   sont similaires (même moyenne / variance proche).\n"
+            "4. Le résultat est une partition de l'image en grandes régions homogènes."
+        )
+        messagebox.showinfo("Division-fusion", text)
+
+    def _show_region_growing_info(self):
+        """Affiche une explication sur la croissance de régions (region growing)."""
+        text = (
+            "Croissance de régions (region growing) :\n\n"
+            "1. On choisit un ou plusieurs GERMES (pixels de départ).\n"
+            "2. On ajoute à la région les pixels voisins dont les caractéristiques\n"
+            "   (intensité, couleur) sont proches de celles du germe.\n"
+            "3. On répète tant que de nouveaux pixels peuvent être ajoutés.\n"
+            "4. Chaque germe donne naissance à une région connectée.\n"
+        )
+        messagebox.showinfo("Croissance de régions", text)
 
     def on_resize(self, event=None):
         """Gère le redimensionnement de la fenêtre et de l'image."""
